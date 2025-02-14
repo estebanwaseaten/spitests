@@ -1,0 +1,7 @@
+*.o
+*.so
+build/
+spistress*.o
+*.so
+build/
+spistress
