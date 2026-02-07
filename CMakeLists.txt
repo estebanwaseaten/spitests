@@ -7,26 +7,16 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 add_compile_options(-Wall ) # -Wextra)
 
-set(SOURCE_LIST
-	"spitests.cpp"
+set(SOURCE_LIST_SPISEND
+	"spisend_src/spisend.cpp"
 )
 
-set(LIBRARIES_LIST
+set(SOURCE_LIST_LOOPBACK
+	"spiloopback_src/spitests.cpp"
 )
 
-# if libs have to be compiled --> calls CMakeLists.txt in those dirs: ???
-foreach(LIBRARY ${LIBRARIES_LIST} )
-	add_subdirectory(${LIBRARY} ${LIBRARY}/build)				#  # first ${LIBRARY} for source dir, second for binary dir (i.e. the dir where all the output files are put, but not the library binary)
-endforeach()
-
+SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}")
 
 #defines the target:
-add_executable(${PROJECT_NAME} ${SOURCE_LIST})
-
-set(RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR})
-set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR})
-
-target_include_directories(${PROJECT_NAME}
-	PRIVATE
-		${PROJECT_SOURCE_DIR}
-)
+add_executable(loopback ${SOURCE_LIST_LOOPBACK})
+add_executable(spisend ${SOURCE_LIST_SPISEND})

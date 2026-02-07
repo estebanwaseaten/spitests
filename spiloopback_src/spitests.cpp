@@ -23,6 +23,7 @@ int main( void )
     if( spi_handle < 0 )
     {
         cout << "could not open SPI device" << endl;
+        return -1;
     }
     else
     {
