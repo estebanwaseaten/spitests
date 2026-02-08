@@ -50,9 +50,9 @@ int main( int argc, char *argv[] )
         cout << "open SPI device: Success!" << endl;
     }
 
-    uint8_t mode = SPI_MODE_0;
+    uint8_t mode = SPI_MODE_3;
     uint8_t bitsPerWord = 8;
-    uint32_t speed = 1000000;
+    uint32_t speed = 10000;
 
     // set ioctl parameters to default values
     if( ioctl(spi_handle, SPI_IOC_WR_MODE, &mode) == -1 )
@@ -65,8 +65,8 @@ int main( int argc, char *argv[] )
 
     // set up the test transfer:
 	uint32_t ret;
-	uint8_t tx[1] = {170, };    //10101010
-    uint8_t rx[1] = {0, };      //00000000
+	uint8_t tx[2] = {0xF, };    //10101010
+    uint8_t rx[2] = {0, };      //00000000
 
     //gtxPtr = &tx[0];    //points to first byte
     //grxPtr = &rx[0];
@@ -87,9 +87,12 @@ int main( int argc, char *argv[] )
 
     cout << "rx1: " << (uint32_t)rx[0] << endl;
 
-    if( ioctl(spi_handle, SPI_IOC_MESSAGE(1), &spiTransfer) < 1 )
+    for( int i = 0; i < 1000; i++ )
     {
-        cout << "transfer fail" << endl;
+        if( ioctl(spi_handle, SPI_IOC_MESSAGE(1), &spiTransfer) < 1 )
+        {
+            cout << "transfer fail" << endl;
+        }
     }
 
     cout << "rx2: " << (uint32_t)rx[0] << endl;
