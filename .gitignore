@@ -5,3 +5,5 @@ spistress*.o
 *.so
 build/
 spistress
+loopback
+spisend
