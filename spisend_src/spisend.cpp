@@ -52,7 +52,7 @@ int main( int argc, char *argv[] )
 
     uint8_t mode = SPI_MODE_0;
     uint8_t bitsPerWord = 8;
-    uint32_t speed = 10000;
+    uint32_t speed = 100000;
 
     // set ioctl parameters to default values
     if( ioctl(spi_handle, SPI_IOC_WR_MODE, &mode) == -1 )
@@ -65,8 +65,8 @@ int main( int argc, char *argv[] )
 
     // set up the test transfer:
 	uint32_t ret;
-	uint8_t tx[2] = {0xAA, };    //10101010
-    uint8_t rx[2] = {0, };      //00000000
+	uint8_t tx[1] = {0x99, };    //10011001
+    uint8_t rx[1] = {0, };      //00000000
 
     //gtxPtr = &tx[0];    //points to first byte
     //grxPtr = &rx[0];
@@ -80,17 +80,14 @@ int main( int argc, char *argv[] )
         .bits_per_word = bitsPerWord,
     };
 
-    if( ioctl(spi_handle, SPI_IOC_MESSAGE(1), &spiTransfer) < 1 )
+    for( int i = 0; i < 1; i++ )
     {
-        cout << "transfer fail" << endl;
+        if( ioctl(spi_handle, SPI_IOC_MESSAGE(1), &spiTransfer) < 1 )
+        {
+            cout << "transfer fail" << endl;
+        }
+        cout << "rx1: 0x" << std::hex << (uint32_t)rx[0] << endl;
     }
-    cout << "rx1: 0x" << std::hex << (uint32_t)rx[0] << endl;
-
-    if( ioctl(spi_handle, SPI_IOC_MESSAGE(1), &spiTransfer) < 1 )
-    {
-        cout << "transfer fail" << endl;
-    }
-    cout << "rx2: 0x" << std::hex << (uint32_t)rx[0] << endl;
 
     return 0;
 }
