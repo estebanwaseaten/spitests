@@ -29,6 +29,9 @@ struct spi_ioc_transfer spiTransfer;		//has to be initialized to zeros!
 
 int main( int argc, char *argv[] )
 {
+    char *ptr1;
+    long int param1 = 0;
+
     cout << "SPI_send 1.0" << endl;
     if( argv[1] == NULL || strcmp(argv[1], "") == 0 )
     {
@@ -37,6 +40,7 @@ int main( int argc, char *argv[] )
     else
     {
         cout << "argument: " << argv[1] << endl;
+        param1 = strtol( argv[1], &ptr1, 0 );
     }
 
     spi_handle = open( devicePath, O_RDWR );
@@ -65,7 +69,7 @@ int main( int argc, char *argv[] )
 
     // set up the test transfer:
 	uint32_t ret;
-	uint8_t tx[1] = {0x99, };    //10011001
+	uint8_t tx[1] = {(uint8_t)param1, };    //10011001
     uint8_t rx[1] = {0, };      //00000000
 
     //gtxPtr = &tx[0];    //points to first byte
@@ -86,7 +90,7 @@ int main( int argc, char *argv[] )
         {
             cout << "transfer fail" << endl;
         }
-        cout << "rx1: 0x" << std::hex << (uint32_t)rx[0] << endl;
+        cout << "rx1: 0x" << (uint32_t)rx[0] << endl;
     }
 
     return 0;
