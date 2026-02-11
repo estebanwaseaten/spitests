@@ -15,9 +15,9 @@ using namespace std::chrono;
 
 int main( void )
 {
-    cout << "SPI_stress 1.0" << endl;
+    cout << "SPI_loopback 1.0" << endl;
 
-     loadConfig();
+    loadConfig();
 
     spi_handle = open( devicePath, O_RDWR );
     if( spi_handle < 0 )
@@ -50,7 +50,7 @@ void loadConfig( void )
 {
     //load config file if present and overwrite default global values:
     ifstream configFile;
-    configFile.open("spistress.conf", ifstream::in);
+    configFile.open("spiloopback.conf", ifstream::in);
     if ( configFile.is_open() )
     {
         string lineString, token, value;

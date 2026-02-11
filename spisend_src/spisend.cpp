@@ -21,7 +21,7 @@
 
 using namespace std;
 
-const char *devicePath = "/dev/spidev0.0";
+const char *devicePath = "/dev/spidev1.0";
 int spi_handle;
 
 struct spi_ioc_transfer spiTransfer;		//has to be initialized to zeros!
@@ -69,16 +69,19 @@ int main( int argc, char *argv[] )
 
     // set up the test transfer:
 	uint32_t ret;
-	uint8_t tx[1] = {(uint8_t)param1, };    //10011001
-    uint8_t rx[1] = {0, };      //00000000
+	uint8_t tx[2] = {(param1 >> 8), (uint8_t)param1 };    //10011001
+    uint8_t rx[2] = {0, };      //00000000
 
     //gtxPtr = &tx[0];    //points to first byte
     //grxPtr = &rx[0];
 
+    cout << "tx[0]" << (uint32_t)tx[0] << endl;
+    cout << "tx[1]" << (uint32_t)tx[1] << endl;
+
     spiTransfer = {
         .tx_buf = (uint64_t)&tx,    //transmitted
         .rx_buf = (uint64_t)&rx,    //received
-        .len = 1,
+        .len = 2,
         .speed_hz = speed,
         .delay_usecs = 0,
         .bits_per_word = bitsPerWord,
@@ -90,7 +93,13 @@ int main( int argc, char *argv[] )
         {
             cout << "transfer fail" << endl;
         }
-        cout << "rx1: 0x" << (uint32_t)rx[0] << endl;
+        uint16_t highbits = rx[0];
+        uint16_t lowbits = rx[1];
+        uint16_t result = (highbits << 8) + lowbits;
+        cout << endl;
+        cout << "rx[0]" << (uint32_t)rx[0] << endl;
+        cout << "rx[1]" << (uint32_t)rx[1] << endl;
+        cout << "rx: " << result <<  endl;
     }
 
     return 0;
