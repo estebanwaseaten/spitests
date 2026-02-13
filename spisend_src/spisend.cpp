@@ -176,6 +176,8 @@ void fetch( void )
     int errorCount = 0;
     uint16_t response = 0;
 
+    float factor = 3.3/4096;
+
     response = simpleTransfer( 0x6000 );    //ask if data is ready
     response = simpleTransfer( 0x5000 );    //fetch reply
     if( SPIDATA( response ) == 0 )
@@ -217,7 +219,8 @@ void fetch( void )
 
     for( int i = 0; i < repeats; i++ )
     {
-        cout << "16bit msg: 0x" << hex << results[i] << " diff: " << dec << results[i] - previous << endl;
+        //cout << "16bit msg: 0x" << hex << results[i] << " dec: " << dec << results[i] << "volts: " << factor*results[i] << endl;
+        cout << factor*results[i] << endl;
         if( (results[i] - previous) != 1 )
             errorCount++;
 
