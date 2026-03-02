@@ -17,7 +17,7 @@ bool valid;
 uint8_t channelCount;
 
 int spi_handle;
-const char *devicePath = "/dev/spidev0.0";			//device path     could change depending on...
+const char *devicePath = "/dev/spidev1.0";			//device path     could change depending on...
 
 uint8_t mode = SPI_MODE_0;
 /*  spiTransfer = {
