@@ -176,7 +176,7 @@ void fetch( void )
     int errorCount = 0;
     uint16_t response = 0;
 
-    float factor = 3.3/4096;
+    float factor = 3.3/4096;            //diff wrong because of offset...
 
     response = simpleTransfer( 0x6000 );    //ask if data is ready
     response = simpleTransfer( 0x5000 );    //fetch reply
@@ -220,7 +220,7 @@ void fetch( void )
     for( int i = 0; i < repeats; i++ )
     {
         //cout << "16bit msg: 0x" << hex << results[i] << " dec: " << dec << results[i] << "volts: " << factor*results[i] << endl;
-        cout << factor*results[i] << endl;
+        cout << dec << factor*results[i] <<  " (0x" << hex << results[i] << ")" << endl;
         if( (results[i] - previous) != 1 )
             errorCount++;
 
@@ -230,6 +230,7 @@ void fetch( void )
     cout << "total duration: " << dec << duration << " ns" << endl;
     cout << "transfer duration: " << duration/repeats << " ns" << endl;
     cout << "send frequency: " << (double)repeats/(double)duration*(double)1000000 << " kHz" << endl;
+    cout << "ONLY CORRECT FOR SINGLE ENDED ACQUISITION (otherwise factors and range change)" << endl;
 }
 
 
