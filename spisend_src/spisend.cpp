@@ -55,14 +55,15 @@ struct spi_ioc_transfer spiTransfer;		//has to be initialized to zeros!
 
 uint16_t simpleTransfer( uint16_t data );
 int arrayTransfer( void );
-void fetch( void );
+void fetch( int param );
+void fetchChannel( uint32_t ch );
 
 int main( int argc, char *argv[] )
 {
     char *ptr1;
     char *ptr2;
     long int param1 = 0;
-    int repeat = 1;
+    long int param2 = 1;
 
     cout << "SPI_send 1.0" << endl;
     if( argv[1] == NULL || strcmp(argv[1], "") == 0 )
@@ -77,7 +78,7 @@ int main( int argc, char *argv[] )
     if( !( argv[2] == NULL || strcmp(argv[2], "") == 0 ) )
     {
         cout << "argument2: " << argv[2] << endl;
-        repeat = strtol( argv[2], &ptr2, 0 );
+        param2 = strtol( argv[2], &ptr2, 0 );
     }
 
     spi_handle = open( devicePath, O_RDWR );
@@ -103,39 +104,38 @@ int main( int argc, char *argv[] )
 
     if( strcmp( argv[1], "fetch" ) == 0 )
     {
-        fetch();
+        fetch( param2 );
     }
     else
     {
         uint16_t *results;
-        results = (uint16_t *)malloc( sizeof( uint16_t ) * repeat );
+        results = (uint16_t *)malloc( sizeof( uint16_t ) * param2 );
 
 
         auto begin = std::chrono::high_resolution_clock::now();
-        for( int i = 0; i < repeat; i++ )
+        for( int i = 0; i < param2; i++ )
         {
             results[i] = simpleTransfer( param1 );
         }
         auto end = std::chrono::high_resolution_clock::now();
         auto duration = duration_cast<nanoseconds>(end-begin).count();
 
-        cout << "16bit msg: 0x" << hex << results[0] << endl;
-        cout << "16bit msg: 0x" << hex << results[1] << endl;
-        cout << "16bit msg: 0x" << hex << results[2] << endl;
-        for( int i = 3; i < repeat; i++ )
+
+        for( int i = 0; i < param2; i++ )
         {
-            cout << "16bit msg: 0x" << hex << results[i] << " diff: " << dec << results[i]-results[i-1] << endl;
+            cout << "16bit msg: 0x" << hex << results[i] << endl;
         }
 
         cout << "total duration: " << dec << duration << " ns" << endl;
-        cout << "transfer duration: " << duration/repeat << " ns" << endl;
-    	cout << "send frequency: " << (double)repeat/(double)duration*(double)1000000 << " kHz" << endl;
+        cout << "transfer duration: " << duration/param2 << " ns" << endl;
+    	cout << "send frequency: " << (double)param2/(double)duration*(double)1000000 << " kHz" << endl;
 
     }
 
     return 0;
 }
 
+// how do I transfer data....
 uint16_t simpleTransfer( uint16_t data )
 {
     // set up the test transfer:
@@ -171,41 +171,60 @@ uint16_t simpleTransfer( uint16_t data )
 
 }
 
-void fetch( void )
+void fetch( int param )
+{
+    uint16_t response = 0;
+
+    response = simpleTransfer( 0x6000 );    //ask if data is ready on any channels
+    response = simpleTransfer( 0x5000 );        //fetch reply
+    if( SPIDATA( response ) == 0 )
+    {
+        cout << "no data ready!" << endl;
+        return;
+    }
+    else
+    {
+        cout << "data ready: 0x" << hex << response << endl;
+    }
+
+    for( int i = 0; i < 4; i++ )
+    {
+        uint8_t channel = (response >> i) & 1;
+        if( channel == 1 )
+        {
+            cout << "fetching channel " << i+1 << endl;
+            fetchChannel( i+1 );
+        }
+    }
+}
+
+void fetchChannel( uint32_t ch )
 {
     int errorCount = 0;
     uint16_t response = 0;
 
     float factor = 3.3/4096;            //diff wrong because of offset...
 
-    response = simpleTransfer( 0x6000 );    //ask if data is ready
-    response = simpleTransfer( 0x5000 );    //fetch reply
-    if( SPIDATA( response ) == 0 )
-    {
-        cout << "no data ready!" << endl;
-        return;
-    }
-
-    response = simpleTransfer( 0x6200 );   //request
+    response = simpleTransfer( 0x6200 + ch );   //request
     response = simpleTransfer( 0x5000 );   //check that this is an acknowledgement:
     switch( SPICMD(response) )
     {
         case RESP_ERR:
-            cout << "ERR!" << endl;
+            cout << "ERR! " << hex <<  SPIDATA(response) << endl;
             return;
         case RESP_WAIT:
-            cout << "WAIT!" << endl;
+            cout << "WAIT! " << SPIDATA(response) << endl;
             return;
         case RESP_ACK:
-            cout << "ACK!" << endl;
+            cout << "ACK! " << SPIDATA(response) << endl;
             break;
     }
     int repeats = simpleTransfer( 0x5000 ); //size (can occupy full 16 bits)
     cout << "size: " << dec << repeats << endl;
 
     //buffer
-    uint16_t *results;
-    results = (uint16_t *)malloc( sizeof( uint16_t ) * repeats );
+    uint32_t *results;
+    results = (uint32_t *)malloc( sizeof( uint32_t ) * repeats );
 
     auto begin = std::chrono::high_resolution_clock::now();
     for( int i = 0; i < repeats; i++ )
@@ -215,7 +234,7 @@ void fetch( void )
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = duration_cast<nanoseconds>(end-begin).count();
 
-    uint16_t previous = 0;
+    uint32_t previous = 0;
 
     for( int i = 0; i < repeats; i++ )
     {
