@@ -57,6 +57,8 @@ uint16_t simpleTransfer( uint16_t data );
 int arrayTransfer( void );
 void fetch( int param );
 void fetchChannel( uint32_t ch );
+void dump( int param );
+void dumpChannel( uint32_t ch );
 
 int main( int argc, char *argv[] )
 {
@@ -105,6 +107,10 @@ int main( int argc, char *argv[] )
     if( strcmp( argv[1], "fetch" ) == 0 )
     {
         fetch( param2 );
+    }
+    else if( strcmp( argv[1], "dump" ) == 0 )
+    {
+        dump( param2 );
     }
     else
     {
@@ -171,12 +177,38 @@ uint16_t simpleTransfer( uint16_t data )
 
 }
 
+void dump( int param )
+{
+    uint16_t response = 0;
+    response = simpleTransfer( 0x6000 );    //ask if data is ready on any channels / could also ask if NEW data is ready...
+    response = simpleTransfer( 0x5000 );    //fetch reply for last question
+    if( SPIDATA( response ) == 0 )
+    {
+        cout << "no data ready!" << endl;
+        return;
+    }
+    else
+    {
+        cout << "data ready: 0x" << hex << response << endl;
+    }
+
+    for( int i = 0; i < 4; i++ )
+    {
+        uint8_t channel = (response >> i) & 1;
+        if( channel == 1 )
+        {
+            cout << "fetching channel " << i+1 << endl;
+            dumpChannel( i+1 );
+        }
+    }
+}
+
 void fetch( int param )
 {
     uint16_t response = 0;
 
-    response = simpleTransfer( 0x6000 );    //ask if data is ready on any channels
-    response = simpleTransfer( 0x5000 );        //fetch reply
+    response = simpleTransfer( 0x6000 );    //ask if data is ready on any channels / could also ask if NEW data is ready...
+    response = simpleTransfer( 0x5000 );    //fetch reply for last question
     if( SPIDATA( response ) == 0 )
     {
         cout << "no data ready!" << endl;
@@ -246,6 +278,63 @@ void fetchChannel( uint32_t ch )
         previous = results[i];
     }
     cout << "error count: " << dec << errorCount << endl;       //only works if data is continuous 12345... for testing
+    cout << "total duration: " << dec << duration << " ns" << endl;
+    cout << "transfer duration: " << duration/repeats << " ns" << endl;
+    cout << "send frequency: " << (double)repeats/(double)duration*(double)1000000 << " kHz" << endl;
+    cout << "ONLY CORRECT FOR SINGLE ENDED ACQUISITION (otherwise factors and range change)" << endl;
+}
+
+void dumpChannel( uint32_t ch )
+{
+    int errorCount = 0;
+    uint16_t response = 0;
+
+    float factor = 3.3/4096;            //diff wrong because of offset...
+
+    response = simpleTransfer( 0x6200 + ch );   //request
+    response = simpleTransfer( 0x5000 );   //check that this is an acknowledgement:
+    switch( SPICMD(response) )
+    {
+        case RESP_ERR:
+            cout << "ERR! " << hex <<  SPIDATA(response) << endl;
+            return;
+        case RESP_WAIT:
+            cout << "WAIT! " << SPIDATA(response) << endl;
+            return;
+        case RESP_ACK:
+            cout << "ACK! " << SPIDATA(response) << endl;
+            break;
+    }
+    int repeats = simpleTransfer( 0x5000 ); //size (can occupy full 16 bits)
+    cout << "size: " << dec << repeats << endl;
+
+    //buffer
+    uint32_t *results;
+    results = (uint32_t *)malloc( sizeof( uint32_t ) * repeats );
+
+    auto begin = std::chrono::high_resolution_clock::now();
+    for( int i = 0; i < repeats; i++ )
+    {
+        results[i] = simpleTransfer( 0x5000 );  //query
+    }
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = duration_cast<nanoseconds>(end-begin).count();
+
+    uint32_t previous = 0;
+
+    ofstream myfile;
+    if( ch == 1 )
+        myfile.open ("channel1.txt");
+    else if( ch == 2 )
+        myfile.open ("channel2.txt");
+
+    for( int i = 0; i < repeats; i++ )
+    {
+        myfile << dec << results[i] << endl;
+    }
+
+    myfile.close();
+
     cout << "total duration: " << dec << duration << " ns" << endl;
     cout << "transfer duration: " << duration/repeats << " ns" << endl;
     cout << "send frequency: " << (double)repeats/(double)duration*(double)1000000 << " kHz" << endl;
