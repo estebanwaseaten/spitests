@@ -10,6 +10,9 @@
 #include <string>
 #include <random>
 #include <cstring>
+#include <chrono>
+#include <thread>
+
 
 #include <fcntl.h>      //open() and O_RDWR
 #include <unistd.h>    //close()
@@ -20,8 +23,8 @@
 #include <cmath>
 
 #define RESP_WAIT 0xA3		// 10100011
-#define RESP_ERR 0xAC		// 10101100
-#define RESP_ACK 0xA6		// 10100110
+#define RESP_ERR  0xAC		// 10101100
+#define RESP_ACK  0xA6		// 10100110
 #define RESP_DONE 0xA7		// 10100111
 
 #define CMD_ADD 0x55		// 01010101		for debugging
@@ -59,6 +62,7 @@ void fetch( int param );
 void fetchChannel( uint32_t ch );
 void dump( int param );
 void dumpChannel( uint32_t ch );
+void timebase( int param );
 
 int main( int argc, char *argv[] )
 {
@@ -111,6 +115,10 @@ int main( int argc, char *argv[] )
     else if( strcmp( argv[1], "dump" ) == 0 )
     {
         dump( param2 );
+    }
+    else if( strcmp( argv[1], "timebase" ) == 0 )
+    {
+        timebase( param2 );
     }
     else
     {
@@ -177,6 +185,52 @@ uint16_t simpleTransfer( uint16_t data )
 
 }
 
+// DAQ commands global
+#define CMD_GET_TIM2_MHZ 		0x42		// 01001010		--> fetch MHZ of timer (should be 144?)
+#define CMD_SET_TIM2_ARRHI 		0x4B		// 01001011
+#define CMD_GET_TIM2_ARRHI 		0x4A		// 01001010
+#define CMD_SET_TIM2_ARRLO 		0x4D		// 01001101
+#define CMD_GET_TIM2_ARRLO 		0x4C		// 01001100
+
+void timebase( int param )
+{
+    float dt = 0.1 * param;
+    if( dt < 0.2 )
+    {
+        dt = 0.2;
+        cout << "cannot set dt < 0.2us --> ";
+
+    }
+    cout << "setting deltaT to " << dt << " us" << endl;
+
+    //1. fetch timer speed:
+    uint16_t response = 0;
+    response = simpleTransfer( 0x4200 );    //ask if data is ready on any channels / could also ask if NEW data is ready...
+    response = simpleTransfer( 0x5000 );    //fetch reply for last question
+    uint16_t timerSpeed = (response & 0xFF);
+
+    cout << "timer 2 running at " << dec << timerSpeed << " MHz" << endl;
+
+    //calculate value for ARR
+    uint32_t arr = (uint32_t)(dt * timerSpeed) - 1;
+    double exact_dt = 0.000001/(timerSpeed) * (arr+1);
+
+    cout << "arr = " << dec << arr << " (" << (arr+1) << " counts)" << endl;
+    cout << "exact dt: " << exact_dt << " us" << endl;
+
+    uint32_t arr1 = (arr & 0xFF000000) >> 24;
+    uint32_t arr2 = (arr & 0xFF0000) >> 16;
+    uint32_t arr3 = (arr & 0xFF00) >> 8;
+    uint32_t arr4 = (arr & 0xFF);
+
+    response = simpleTransfer( 0x4B00 | arr1 );
+    response = simpleTransfer( 0x4B00 | arr2 );
+    response = simpleTransfer( 0x4B00 | arr3 );
+    response = simpleTransfer( 0x4B00 | arr4 );
+    response = simpleTransfer( 0x5000 );
+}
+
+
 void dump( int param )
 {
     uint16_t response = 0;
@@ -228,6 +282,12 @@ void fetch( int param )
             fetchChannel( i+1 );
         }
     }
+}
+
+void setDeltaT( void )
+{
+    //1. get timer clock
+
 }
 
 void fetchChannel( uint32_t ch )
